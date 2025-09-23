@@ -58,8 +58,8 @@ pip install -e .
 # 3. 创建配置文件
 cp .env.example .env
 
-# 4. 创建临时目录
-mkdir -p temp
+# 4. 创建沙盒目录（可选，程序会自动创建）
+mkdir -p cache_dir/gemini_cli_workspace
 ```
 
 ## ⚙️ 配置
@@ -130,15 +130,15 @@ python3 -m gemini_bridge
 12. **web_search** - 网络搜索
 13. **memory** - 内存操作
 
-### 工作目录
+### 工作目录（沙盒模式）
 
-- 所有文件操作都限制在 `temp/` 目录内
-- 相对路径会自动解析为相对于 `temp/` 目录
-- 绝对路径必须在允许的范围内
+- 所有文件操作都限制在 `cache_dir/gemini_cli_workspace/` 目录内
+- 相对路径会自动解析为相对于 `cache_dir/gemini_cli_workspace/` 目录
+- 绝对路径必须在允许的沙盒范围内
 
 ### 安全限制
 
-- 文件操作仅限于项目的 `temp` 目录
+- 文件操作仅限于项目的 `cache_dir/gemini_cli_workspace` 沙盒目录
 - 命令执行有严格的安全检查
 - 危险命令（如 `rm -rf`, `sudo` 等）被禁止
 - 所有操作都有超时限制
@@ -158,7 +158,7 @@ mcp_servers/gemini-cli-custom-bridge-python/
 │   ├── file_operations.py     # 文件操作
 │   ├── command_executor.py    # 命令执行
 │   └── extended_tools.py      # 扩展工具
-├── temp/                      # 工作目录
+├── cache_dir/gemini_cli_workspace/  # 沙盒工作目录
 ├── pyproject.toml            # 项目配置
 ├── .env.example              # 环境变量示例
 ├── install.sh                # 安装脚本
@@ -208,9 +208,9 @@ mcp_servers/gemini-cli-custom-bridge-python/
 3. **权限错误**
 
    ```bash
-   # 确保 temp 目录存在且有写权限
-   mkdir -p temp
-   chmod 755 temp
+   # 确保沙盒目录存在且有写权限
+   mkdir -p cache_dir/gemini_cli_workspace
+   chmod 755 cache_dir/gemini_cli_workspace
    ```
 
 4. **依赖问题**

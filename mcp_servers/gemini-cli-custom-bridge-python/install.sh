@@ -25,23 +25,15 @@ fi
 
 echo "✅ 找到 pip"
 
-# 创建虚拟环境（可选）
-read -p "🤔 是否创建虚拟环境？(y/N): " create_venv
-if [[ $create_venv =~ ^[Yy]$ ]]; then
-    echo "📦 创建虚拟环境..."
-    python3 -m venv venv
-    source venv/bin/activate
-    echo "✅ 虚拟环境已激活"
-fi
+# 注意：此项目使用上层OxyGent项目的虚拟环境
+echo "📋 检测到上层项目虚拟环境，将使用共享依赖..."
 
 # 安装依赖
 echo "📦 安装 Python 依赖..."
 pip3 install -e .
 
-# 创建 temp 目录
-echo "📁 创建临时目录..."
-mkdir -p temp
-echo "✅ 临时目录已创建"
+# 沙盒目录将使用上层项目的 cache_dir/gemini_cli_workspace
+echo "📁 沙盒目录使用上层项目路径..."
 
 # 复制环境变量文件
 if [ ! -f ".env" ]; then

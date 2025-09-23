@@ -56,22 +56,22 @@ class ConfigManager:
     
     def _create_server_config(self) -> ServerConfig:
         """创建服务器配置"""
-        # 获取项目根目录和 temp 目录
+        # 获取项目根目录和沙盒目录
         current_dir = Path(__file__).parent
         project_root = current_dir.parent.parent.parent
-        temp_dir = project_root / "temp"
+        sandbox_dir = project_root / "cache_dir" / "gemini_cli_workspace"
         
-        # 确保 temp 目录存在
-        temp_dir.mkdir(exist_ok=True)
+        # 确保沙盒目录存在
+        sandbox_dir.mkdir(parents=True, exist_ok=True)
         
         return ServerConfig(
             name="gemini-cli-custom-bridge-python",
             version="1.0.0",
-            description="Python version of Gemini CLI Custom Bridge MCP Server",
+            description="Python version of Gemini CLI Custom Bridge MCP Server - Sandbox Mode",
             ai_api_url=self._get_required_env("NEXT_PUBLIC_AI_API_URL"),
             ai_model=self._get_env("NEXT_PUBLIC_AI_MODEL", "gpt-3.5-turbo"),
             ai_api_key=self._get_required_env("NEXT_PUBLIC_AI_API_KEY"),
-            temp_dir=str(temp_dir),
+            temp_dir=str(sandbox_dir),
             project_root=str(project_root),
             timeout=int(self._get_env("AI_TIMEOUT", "30")),
             max_file_size=int(self._get_env("MAX_FILE_SIZE", str(10 * 1024 * 1024)))
@@ -123,10 +123,10 @@ class ConfigManager:
                 return False
             
             # 验证目录路径
-            temp_path = Path(config.temp_dir)
-            if not temp_path.exists():
-                print(f"[CONFIG] 创建 temp 目录: {temp_path}", file=sys.stderr)
-                temp_path.mkdir(parents=True, exist_ok=True)
+            sandbox_path = Path(config.temp_dir)
+            if not sandbox_path.exists():
+                print(f"[CONFIG] 创建沙盒目录: {sandbox_path}", file=sys.stderr)
+                sandbox_path.mkdir(parents=True, exist_ok=True)
             
             print("[CONFIG] 配置验证通过", file=sys.stderr)
             return True
@@ -146,7 +146,7 @@ class ConfigManager:
             print(f"[CONFIG]   - AI API URL: {config.ai_api_url}", file=sys.stderr)
             print(f"[CONFIG]   - AI Model: {config.ai_model}", file=sys.stderr)
             print(f"[CONFIG]   - AI API Key: {'*' * (len(config.ai_api_key) - 4) + config.ai_api_key[-4:] if len(config.ai_api_key) > 4 else '****'}", file=sys.stderr)
-            print(f"[CONFIG]   - Temp 目录: {config.temp_dir}", file=sys.stderr)
+            print(f"[CONFIG]   - 沙盒目录: {config.temp_dir}", file=sys.stderr)
             print(f"[CONFIG]   - 项目根目录: {config.project_root}", file=sys.stderr)
             print(f"[CONFIG]   - 超时时间: {config.timeout}s", file=sys.stderr)
             print(f"[CONFIG]   - 最大文件大小: {config.max_file_size} bytes", file=sys.stderr)

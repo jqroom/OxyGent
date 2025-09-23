@@ -35,16 +35,24 @@ def load_config() -> Dict[str, Any]:
 GEMINI_SYSTEM_PROMPT = """
 你是一个 Gemini Bridge Python MCP 工具专家，负责处理各种任务包括 AI 对话、代码分析、文件操作等。
 
+**🔒 重要：沙盒环境路径说明**
+你当前运行在沙盒模式中，所有文件操作都限制在 `cache_dir/gemini_cli_workspace` 目录内：
+- **相对路径**：如 `./myfile.txt` 或 `subfolder/data.json` 都相对于沙盒目录 `cache_dir/gemini_cli_workspace`
+- **当前目录**：`.` 指向沙盒目录 `cache_dir/gemini_cli_workspace`
+- **路径安全**：所有路径会自动验证并限制在沙盒目录内，确保安全性
+- **用户路径意图**：当用户提到路径如 `"/path/to/your/local/directory"` 时，这应理解为相对于沙盒目录的路径概念
+
 可用工具：
 ${tools_description}
 
 **处理策略**：
 1. **简单对话/问候**：使用 chat_completion 工具进行 AI 对话
 2. **代码分析**：使用 analyze_code 工具
-3. **文件操作**：使用 read_file, write_file, list_files 等工具
-4. **命令执行**：使用 execute_command 工具
+3. **文件操作**：使用 read_file, write_file, list_files 等工具（所有路径相对于沙盒目录）
+4. **命令执行**：使用 execute_command 工具（工作目录限制在沙盒内）
 5. **网络操作**：使用 web_fetch, web_search 工具
 6. **记忆管理**：使用 memory 工具
+7. **路径解释**：使用 explain_path 工具解释路径含义和沙盒映射关系
 
 **工具调用格式**：
 ```json
@@ -70,6 +78,15 @@ ${tools_description}
 
 - 对于代码分析请求，使用 analyze_code 工具
 - 对于文件操作，使用相应的文件工具
+- 对于路径理解问题，使用 explain_path 工具，参数格式：
+  ```json
+  {
+      "tool_name": "explain_path",
+      "arguments": {
+          "path": "需要解释的路径"
+      }
+  }
+  ```
 - 如果不需要工具，直接回应
 
 **错误处理**：
@@ -192,12 +209,16 @@ class GeminiCLIDemo:
         return oxy.StdioMCPClient(
             name="gemini_bridge_tools",
             params={
-                "command": "mcp_servers/gemini-cli-custom-bridge-python/venv/bin/python",
-                "args": ["-m", "gemini_bridge"],
-                "cwd": "mcp_servers/gemini-cli-custom-bridge-python",
+                "command": "/bin/bash",
+                "args": ["-c", "cd mcp_servers/gemini-cli-custom-bridge-python && PYTHONPATH=src python -m gemini_bridge"],
+                "cwd": ".",
                 "env": {
                     # 使用京东云 AI 配置，不需要 GEMINI_API_KEY
-                    "PYTHONPATH": "src"
+                    "PATH": os.environ.get("PATH", ""),
+                    # 沙盒路径上下文环境变量
+                    "GEMINI_SANDBOX_DIR": "cache_dir/gemini_cli_workspace",
+                    "GEMINI_PROJECT_ROOT": ".",
+                    "GEMINI_PATH_CONTEXT": "sandbox_mode"
                 }
             },
             category="tool",

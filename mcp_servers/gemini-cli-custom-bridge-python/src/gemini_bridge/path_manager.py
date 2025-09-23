@@ -194,6 +194,97 @@ def validate_working_directory(cwd: Optional[str] = None) -> PathValidationResul
     return validate_path(work_dir, PathValidationOptions(allow_exact_temp_dir=True))
 
 
+def explain_path_context(input_path: str) -> str:
+    """
+    解释路径的含义和映射关系
+    
+    Args:
+        input_path: 用户输入的路径
+        
+    Returns:
+        路径解释说明
+    """
+    try:
+        # 验证路径并获取绝对路径
+        result = validate_path(input_path)
+        
+        if not result.is_valid:
+            return f"❌ 路径无效: {input_path}\n原因: {result.error_message}"
+        
+        absolute_path = Path(result.absolute_path)
+        sandbox_dir = PATH_CONFIG.sandbox_dir.resolve()
+        
+        # 计算相对于沙盒目录的路径
+        try:
+            relative_to_sandbox = absolute_path.relative_to(sandbox_dir)
+            relative_path_str = str(relative_to_sandbox) if str(relative_to_sandbox) != "." else "沙盒根目录"
+        except ValueError:
+            relative_path_str = "沙盒目录外"
+        
+        # 分析路径类型
+        path_type = "未知类型"
+        path_examples = ""
+        
+        if input_path == ".":
+            path_type = "当前目录"
+            path_examples = "等同于沙盒根目录"
+        elif input_path.startswith("./"):
+            path_type = "相对路径（显式）"
+            path_examples = f"从沙盒根目录开始: {input_path[2:]}"
+        elif input_path.startswith("/"):
+            path_type = "绝对路径"
+            path_examples = "系统绝对路径，需要在沙盒范围内"
+        elif not input_path.startswith("../"):
+            path_type = "相对路径（隐式）"
+            path_examples = f"从沙盒根目录开始: {input_path}"
+        else:
+            path_type = "上级目录路径"
+            path_examples = "尝试访问沙盒外部，可能被拒绝"
+        
+        # 检查是否存在
+        exists_status = "✅ 存在" if absolute_path.exists() else "❌ 不存在"
+        file_type = ""
+        if absolute_path.exists():
+            if absolute_path.is_file():
+                file_type = "📄 文件"
+            elif absolute_path.is_dir():
+                file_type = "📁 目录"
+            else:
+                file_type = "🔗 链接或特殊文件"
+
+        explanation = f"""
+🎯 路径解释说明:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 用户输入路径: "{input_path}"
+🏷️  路径类型: {path_type}
+📂 沙盒目录位置: {sandbox_dir}
+🔗 实际绝对路径: {absolute_path}
+📍 相对沙盒路径: {relative_path_str}
+📊 存在状态: {exists_status} {file_type}
+
+💡 路径理解规则:
+   • 相对路径 (如 "myfile.txt", "data/config.json") → 相对于沙盒目录解析
+   • 显式相对路径 ("./file.txt") → 明确从沙盒根目录开始
+   • 当前目录 "." → 指向沙盒目录 {sandbox_dir}
+   • 绝对路径 ("/path/to/file") → 必须在沙盒范围内才能访问
+   • 上级目录 ("../file") → 尝试访问沙盒外部，通常被拒绝
+
+🔒 安全机制:
+   • 所有路径操作都被安全地限制在沙盒目录内
+   • 路径解析会自动规范化和验证安全性
+   • 尝试访问沙盒外部的路径会被拒绝
+
+📝 示例说明: {path_examples}
+
+✅ 路径验证: 通过 - 可以安全访问
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        return explanation.strip()
+        
+    except Exception as e:
+        return f"❌ 解释路径时发生错误: {str(e)}"
+
+
 def resolve_safe_path(
     input_path: str,
     options: Optional[PathValidationOptions] = None

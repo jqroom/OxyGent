@@ -41,6 +41,7 @@ from .ai_client import AIClient
 from .file_operations import FileOperations
 from .command_executor import CommandExecutor
 from .extended_tools import ExtendedTools
+from .path_manager import explain_path_context
 
 
 class GeminiBridgeServer:
@@ -96,11 +97,11 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="read_file",
-                    description="读取文件 - 读取指定路径的文件内容",
+                    description="读取文件 - 读取沙盒目录内指定路径的文件内容",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "path": {"type": "string", "description": "文件路径"},
+                            "path": {"type": "string", "description": "文件路径（相对于沙盒目录 cache_dir/gemini_cli_workspace，如 'myfile.txt' 或 'subfolder/data.json'）"},
                             "encoding": {"type": "string", "description": "文件编码", "default": "utf-8"}
                         },
                         "required": ["path"]
@@ -108,11 +109,11 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="write_file",
-                    description="写入文件 - 将内容写入指定路径的文件",
+                    description="写入文件 - 将内容写入沙盒目录内指定路径的文件",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "path": {"type": "string", "description": "文件路径"},
+                            "path": {"type": "string", "description": "文件路径（相对于沙盒目录 cache_dir/gemini_cli_workspace，如 'myfile.txt' 或 'subfolder/data.json'）"},
                             "content": {"type": "string", "description": "文件内容"},
                             "encoding": {"type": "string", "description": "文件编码", "default": "utf-8"}
                         },
@@ -121,11 +122,11 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="list_files",
-                    description="列出文件 - 列出指定目录下的文件和子目录",
+                    description="列出文件 - 列出沙盒目录内指定目录下的文件和子目录",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "path": {"type": "string", "description": "目录路径", "default": "."},
+                            "path": {"type": "string", "description": "目录路径（相对于沙盒目录 cache_dir/gemini_cli_workspace，'.' 表示沙盒根目录）", "default": "."},
                             "recursive": {"type": "boolean", "description": "是否递归列出", "default": False},
                             "pattern": {"type": "string", "description": "文件名模式", "default": "*"}
                         }
@@ -145,12 +146,12 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="execute_command",
-                    description="执行命令 - 在系统中执行命令行指令",
+                    description="执行命令 - 在沙盒环境中执行命令行指令",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "command": {"type": "string", "description": "要执行的命令"},
-                            "cwd": {"type": "string", "description": "工作目录", "default": "."},
+                            "cwd": {"type": "string", "description": "工作目录（相对于沙盒目录 cache_dir/gemini_cli_workspace，'.' 表示沙盒根目录）", "default": "."},
                             "timeout": {"type": "integer", "description": "超时时间(秒)", "default": 30}
                         },
                         "required": ["command"]
@@ -158,12 +159,12 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="grep",
-                    description="Grep 搜索 - 在文件中搜索指定模式的文本",
+                    description="Grep 搜索 - 在沙盒目录内的文件中搜索指定模式的文本",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "pattern": {"type": "string", "description": "搜索模式"},
-                            "path": {"type": "string", "description": "搜索路径", "default": "."},
+                            "path": {"type": "string", "description": "搜索路径（相对于沙盒目录 cache_dir/gemini_cli_workspace）", "default": "."},
                             "recursive": {"type": "boolean", "description": "是否递归搜索", "default": True}
                         },
                         "required": ["pattern"]
@@ -171,12 +172,12 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="glob",
-                    description="Glob 模式匹配 - 使用通配符模式查找文件",
+                    description="Glob 模式匹配 - 在沙盒目录内使用通配符模式查找文件",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "pattern": {"type": "string", "description": "Glob 模式"},
-                            "path": {"type": "string", "description": "搜索路径", "default": "."},
+                            "path": {"type": "string", "description": "搜索路径（相对于沙盒目录 cache_dir/gemini_cli_workspace）", "default": "."},
                             "recursive": {"type": "boolean", "description": "是否递归搜索", "default": True}
                         },
                         "required": ["pattern"]
@@ -184,11 +185,11 @@ class GeminiBridgeServer:
                 ),
                 types.Tool(
                     name="edit",
-                    description="文件编辑 - 编辑文件内容，支持查找替换等操作",
+                    description="文件编辑 - 编辑沙盒目录内的文件内容，支持查找替换等操作",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "path": {"type": "string", "description": "文件路径"},
+                            "path": {"type": "string", "description": "文件路径（相对于沙盒目录 cache_dir/gemini_cli_workspace）"},
                             "operation": {"type": "string", "description": "编辑操作类型"},
                             "content": {"type": "string", "description": "编辑内容"}
                         },
@@ -237,6 +238,17 @@ class GeminiBridgeServer:
                         },
                         "required": ["operation"]
                     }
+                ),
+                types.Tool(
+                    name="explain_path",
+                    description="路径解释 - 解释路径的含义和在沙盒环境中的映射关系",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "path": {"type": "string", "description": "需要解释的路径（可以是相对路径、绝对路径或特殊路径如 '.'）"}
+                        },
+                        "required": ["path"]
+                    }
                 )
             ]
         
@@ -274,6 +286,8 @@ class GeminiBridgeServer:
                     return await self._handle_web_search(arguments)
                 elif name == "memory":
                     return await self._handle_memory(arguments)
+                elif name == "explain_path":
+                    return await self._handle_explain_path(arguments)
                 else:
                     error_msg = f"未知工具: {name}"
                     print(f"[ERROR] {error_msg}", file=sys.stderr)
@@ -391,6 +405,24 @@ class GeminiBridgeServer:
         args = MemoryArgs(**arguments)
         result = await self.extended_tools.memory_operation(args)
         return [types.TextContent(type="text", text=json.dumps(result.dict(), ensure_ascii=False))]
+    
+    async def _handle_explain_path(self, arguments: dict) -> List[types.TextContent]:
+        """处理路径解释工具调用"""
+        try:
+            path = arguments.get("path", "")
+            explanation = explain_path_context(path)
+            
+            result = {
+                "success": True,
+                "explanation": explanation,
+                "input_path": path
+            }
+            
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
+        except Exception as e:
+            error_msg = f"路径解释失败: {str(e)}"
+            print(f"[ERROR] {error_msg}", file=sys.stderr)
+            return [types.TextContent(type="text", text=json.dumps({"error": error_msg}, ensure_ascii=False))]
     
     def _register_resources(self):
         """注册资源"""

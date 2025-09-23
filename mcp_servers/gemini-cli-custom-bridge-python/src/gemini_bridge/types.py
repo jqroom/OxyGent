@@ -99,7 +99,53 @@ class EditOperation(BaseModel):
 class EditArgs(BaseModel):
     """文件编辑参数"""
     path: str
-    operations: List[EditOperation]
+    # 支持两种格式：新格式(operations列表)和旧格式(单个operation+content)
+    operations: Optional[List[EditOperation]] = None
+    operation: Optional[str] = None
+    content: Optional[str] = None
+    
+    def model_post_init(self, __context) -> None:
+        """后处理：将旧格式转换为新格式"""
+        if self.operations is None and self.operation is not None:
+            # 如果使用旧格式，转换为新格式
+            if self.operation == "replace":
+                # 对于replace操作，如果content包含多行，则替换整个文件内容
+                content = self.content or ""
+                if '\n' in content or len(content) > 100:
+                    # 内容较长或包含换行符，视为整个文件替换
+                    # 创建一个特殊的操作来标识这是文件内容替换
+                    operation_obj = EditOperation(
+                        type="replace_line",
+                        line_number=-1,  # 使用-1表示替换整个文件
+                        new_content=content
+                    )
+                else:
+                    # 短内容，替换第一行
+                    operation_obj = EditOperation(
+                        type="replace_line",
+                        line_number=1,
+                        new_content=content
+                    )
+            elif self.operation == "insert":
+                operation_obj = EditOperation(
+                    type="insert_line",
+                    line_number=1,
+                    new_content=self.content or ""
+                )
+            elif self.operation == "delete":
+                operation_obj = EditOperation(
+                    type="delete_line",
+                    line_number=1
+                )
+            else:
+                # 默认处理为replace
+                operation_obj = EditOperation(
+                    type="replace_line",
+                    line_number=1,
+                    new_content=self.content or ""
+                )
+            
+            self.operations = [operation_obj]
 
 
 class WebFetchArgs(BaseModel):

@@ -379,7 +379,7 @@ class GeminiBridgeServer:
     async def _handle_edit(self, arguments: dict) -> List[types.TextContent]:
         """处理文件编辑工具调用"""
         args = EditArgs(**arguments)
-        result = await self.extended_tools.edit(args)
+        result = await self.extended_tools.edit_file(args)
         return [types.TextContent(type="text", text=json.dumps(result.dict(), ensure_ascii=False))]
     
     async def _handle_web_fetch(self, arguments: dict) -> List[types.TextContent]:

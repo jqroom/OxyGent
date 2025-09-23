@@ -307,28 +307,47 @@ class ExtendedTools:
             modified_lines = original_lines.copy()
             operations_applied = []
             
+            # 确保operations不为None
+            if not args.operations:
+                return ToolResult(
+                    content=[{"error": "没有提供编辑操作"}],
+                    is_error=True
+                )
+            
             for operation in args.operations:
                 try:
                     if operation.type == "replace_line":
-                        if 1 <= operation.line_number <= len(modified_lines):
+                        if operation.line_number == -1:
+                            # 特殊情况：替换整个文件内容
+                            new_content = operation.new_content or ""
+                            modified_lines = new_content.splitlines()
+                            operations_applied.append({
+                                "type": "replace_file",
+                                "old_line_count": len(original_lines),
+                                "new_line_count": len(modified_lines),
+                                "new_content": new_content
+                            })
+                        elif 1 <= operation.line_number <= len(modified_lines):
                             old_content = modified_lines[operation.line_number - 1]
-                            modified_lines[operation.line_number - 1] = operation.new_content
+                            new_content = operation.new_content or ""
+                            modified_lines[operation.line_number - 1] = new_content
                             operations_applied.append({
                                 "type": "replace_line",
                                 "line_number": operation.line_number,
                                 "old_content": old_content,
-                                "new_content": operation.new_content
+                                "new_content": new_content
                             })
                         else:
                             print(f"[EDIT] 警告: 行号超出范围 {operation.line_number}", file=sys.stderr)
                     
                     elif operation.type == "insert_line":
                         if 0 <= operation.line_number <= len(modified_lines):
-                            modified_lines.insert(operation.line_number, operation.new_content)
+                            new_content = operation.new_content or ""
+                            modified_lines.insert(operation.line_number, new_content)
                             operations_applied.append({
                                 "type": "insert_line",
                                 "line_number": operation.line_number,
-                                "new_content": operation.new_content
+                                "new_content": new_content
                             })
                         else:
                             print(f"[EDIT] 警告: 插入位置超出范围 {operation.line_number}", file=sys.stderr)

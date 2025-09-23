@@ -1,0 +1,10 @@
+{
+  "apiKey": "demo-key-for-testing",
+  "model": "qwen25-32b-native",
+  "baseUrl": "http://llm-32b.jd.com/v1/chat/completions",
+  "timeout": 60000,
+  "maxRetries": 3,
+  "outputFormat": "json",
+  "interactive": false,
+  "browser": false
+}
